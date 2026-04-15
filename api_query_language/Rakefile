@@ -1,0 +1,31 @@
+# frozen_string_literal: true
+
+require "rake/testtask"
+
+Rake::TestTask.new(:test) do |t|
+  t.libs << "test"
+  t.libs << "lib"
+  t.test_files = FileList["test/**/*_test.rb"]
+  t.warning = false
+end
+
+desc "Regenerate racc-compiled parsers from .y grammars"
+task :racc do
+  Dir["lib/**/*.y"].each do |grammar|
+    out = "#{grammar}.rb" # preserve the .y.rb suffix used in this repo
+    sh "bundle exec racc -o #{out} #{grammar}"
+  end
+end
+
+desc "Regenerate oedipus_lex lexers from .rex grammars"
+task :rex do
+  Dir["lib/**/*.rex"].each do |grammar|
+    out = "#{grammar}.rb" # preserve the .rex.rb suffix
+    sh "bundle exec oedipus_lex --output-file #{out} #{grammar}"
+  end
+end
+
+desc "Regenerate all parser/lexer artefacts"
+task generate: [:rex, :racc]
+
+task default: :test

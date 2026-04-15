@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Sync all four gems' VERSION constants to the same literal.
+#
+# Usage:
+#   bin/bump 0.2.0
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: bin/bump <new_version>  (e.g. bin/bump 0.2.0)" >&2
+  exit 1
+fi
+
+NEW="$1"
+
+# Naive sanity check.
+if ! [[ "$NEW" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][a-z0-9]+)?$ ]]; then
+  echo "✗ '$NEW' doesn't look like a version" >&2
+  exit 1
+fi
+
+files=(
+  api_serializer/lib/api_serializer/version.rb
+  api_query_language/lib/api_query_language/version.rb
+  api_query_language_active_record/lib/api_query_language/active_record/version.rb
+  another_api/lib/another_api/version.rb
+)
+
+for f in "${files[@]}"; do
+  sed -i -E "s/VERSION = \".*\"/VERSION = \"${NEW}\"/" "$f"
+  echo "  bumped $f"
+done
+
+echo ""
+echo "✓ Bumped to ${NEW}. Review with \`git diff\` and commit."

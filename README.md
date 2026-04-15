@@ -1,7 +1,6 @@
 # another_api
 
-A set of Ruby gems for building opinionated JSON APIs on Rails. Extracted
-from the Confinus monorepo.
+A set of Ruby gems for building opinionated JSON APIs on Rails.
 
 This repository is a monorepo containing four gems whose versions stay in
 lockstep:
@@ -10,8 +9,8 @@ lockstep:
 |---|---|---|
 | **[api_serializer](api_serializer)** | Declarative DSL for serializing Ruby objects to JSON with typed, versioned schemas. | `literal` |
 | **[api_query_language](api_query_language)** | Filter / sort query-language parser. Produces a backend-agnostic AST. | `literal`, `racc` |
-| **[api_query_language-active_record](api_query_language_active_record)** | ActiveRecord backend for the above — adds `apply_to(relation)`. | `api_query_language`, `activerecord` |
-| **[another_api](another_api)** | Rails engine wiring the three above together with ActionPolicy and Dry::Monads into a JSON API base controller. | all three + `rails`, `action_policy`, `dry-monads` |
+| **[api_query_language-active_record](api_query_language_active_record)** | ActiveRecord backend for the above — adds `apply_to(relation)`, plus `QueryContext` / `NodeWithContext` for custom visitors. | `api_query_language`, `activerecord` |
+| **[another_api](another_api)** | Rails engine wiring the three above together with ActionPolicy and Dry::Monads into a JSON API base controller. | `api_serializer`, `api_query_language`, `api_query_language-active_record`, `rails`, `action_policy`, `dry-monads` |
 
 
 `api_serializer` and `api_query_language` are useable outside Rails.
@@ -40,7 +39,7 @@ Per-gem quickstart is in each gem's README.
 
 ```bash
 bundle install      # installs all four gemspecs as path gems
-bundle exec rake    # runs tests + standardrb across all four gems
+bundle exec rake    # runs tests across all four gems, then standardrb once at the repo root
 ```
 
 Individual gem test suites:
@@ -65,3 +64,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for more.
 ## License
 
 MIT. See [`LICENSE.txt`](LICENSE.txt).
+
+## Acknowledgements
+
+These gems were extracted from the Confinus project. Thanks to them for the original implementation.

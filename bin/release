@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Release all four gems in dependency order.
+#
+# Usage:
+#   bin/release              # build + push
+#   bin/release --dry-run    # build only, print what would be pushed
+#
+# Each gem has its own version.rb with a literal VERSION constant. All four
+# must match before release — the bump is done manually (or via
+# `bin/bump <new_version>`) before this script runs.
+
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+DRY_RUN=0
+[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=1
+
+# Read each gem's VERSION constant and verify they match.
+ser_v=$(ruby -r "./api_serializer/lib/api_serializer/version" -e "puts ApiSerializer::VERSION")
+aql_v=$(ruby -r "./api_query_language/lib/api_query_language/version" -e "puts ApiQueryLanguage::VERSION")
+aqlar_v=$(ruby -r "./api_query_language_active_record/lib/api_query_language/active_record/version" -e "puts ApiQueryLanguage::ActiveRecord::VERSION")
+api_v=$(ruby -r "./another_api/lib/another_api/version" -e "puts AnotherApi::VERSION")
+
+if [[ "$ser_v" != "$aql_v" || "$aql_v" != "$aqlar_v" || "$aqlar_v" != "$api_v" ]]; then
+  echo "✗ gem versions disagree:" >&2
+  echo "  api_serializer:                   $ser_v" >&2
+  echo "  api_query_language:               $aql_v" >&2
+  echo "  api_query_language-active_record: $aqlar_v" >&2
+  echo "  another_api:                      $api_v" >&2
+  echo "Run bin/bump <new_version> to sync." >&2
+  exit 1
+fi
+
+VERSION="$ser_v"
+TAG="v${VERSION}"
+
+if ! git diff-index --quiet HEAD --; then
+  echo "✗ working tree is not clean" >&2; exit 1
+fi
+
+if [[ "$(git rev-parse --abbrev-ref HEAD)" != "main" ]]; then
+  echo "✗ not on main branch" >&2; exit 1
+fi
+
+if git rev-parse "$TAG" >/dev/null 2>&1; then
+  echo "✗ tag $TAG already exists" >&2; exit 1
+fi
+
+GEMS=(
+  "api_serializer:api_serializer.gemspec"
+  "api_query_language:api_query_language.gemspec"
+  "api_query_language_active_record:api_query_language-active_record.gemspec"
+  "another_api:another_api.gemspec"
+)
+
+echo "→ running tests"
+bundle exec rake test
+
+echo "→ running standardrb"
+bundle exec standardrb
+
+mkdir -p pkg
+
+echo "→ building gems (version ${VERSION})"
+for entry in "${GEMS[@]}"; do
+  dir="${entry%%:*}"
+  spec="${entry##*:}"
+  (cd "$dir" && gem build "$spec" -o "../pkg/$(basename "$spec" .gemspec)-${VERSION}.gem")
+done
+
+if [[ $DRY_RUN -eq 1 ]]; then
+  echo ""
+  echo "DRY RUN — would push:"
+  ls -1 pkg/*-"${VERSION}".gem
+  echo "  tag: ${TAG}"
+  exit 0
+fi
+
+echo "→ tagging ${TAG}"
+git tag -a "${TAG}" -m "Release ${TAG}"
+
+echo "→ pushing gems to rubygems.org"
+for entry in "${GEMS[@]}"; do
+  spec="${entry##*:}"
+  name="$(basename "$spec" .gemspec)"
+  gem push "pkg/${name}-${VERSION}.gem"
+done
+
+echo "→ pushing tag"
+git push origin main
+git push origin "${TAG}"
+
+echo ""
+echo "✓ Released ${TAG}"
