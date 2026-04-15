@@ -12,6 +12,11 @@ group :development, :test do
   gem "minitest"
   gem "standard"
   gem "simplecov", require: false
+  # Parser generation toolchain for api_query_language. Both are dev-only:
+  # the generated .y.rb / .rex.rb artefacts are checked in and self-contained
+  # at runtime. Regenerate via `cd api_query_language && bundle exec rake generate`.
+  gem "racc"
+  gem "oedipus_lex"
 end
 
 group :test do

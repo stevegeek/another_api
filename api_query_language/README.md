@@ -18,6 +18,12 @@ Runtime dependencies: [literal](https://github.com/joeldrapper/literal) and
 [racc](https://github.com/ruby/racc). `racc` ships a C extension when
 available and falls back to a pure-Ruby implementation otherwise.
 
+Development-only: [oedipus_lex](https://github.com/seattlerb/oedipus_lex)
+and `racc` itself are used to generate the checked-in `.rex.rb` / `.y.rb`
+artefacts. Runtime does not require `oedipus_lex`; you only need it if you
+change a `.rex` or `.y` grammar and run `bundle exec rake generate` from
+this directory.
+
 ## Quickstart
 
 ```ruby
