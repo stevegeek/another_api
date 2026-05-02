@@ -6,6 +6,7 @@ Gemfile.lock
 .rspec_status
 /pkg/
 /tmp/
+**/tmp/
 coverage/
 /doc/
 /.yardoc/

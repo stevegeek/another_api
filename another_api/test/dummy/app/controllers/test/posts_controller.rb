@@ -6,6 +6,21 @@ module Test
     include AnotherApi::ParamDeserializer
     include AnotherApi::Paginated
     include Dry::Monads[:result]
+    include AnotherApi::OpenAPI::EndpointMetadata
+
+    # Real-world example for AnotherApi::OpenAPI. Because this controller
+    # includes Paginated and FilteredAndSorted, the generated spec WILL
+    # advertise page / page_size / filter / sort on the index action.
+    api_resource "Posts",
+      schema: -> { CoreSchemas::V2::Post },
+      description: "Manage posts. Demonstrates pagination, filter/sort, and a custom collection action."
+
+    api_action :index, summary: "List posts"
+    api_action :show, summary: "Get a single post"
+    api_action :create, summary: "Create a new post"
+
+    # Custom collection action: the path is auto-inferred from Rails routes.
+    api_action :defaults_index, summary: "List posts with default filter and sort applied"
 
     def index
       api_respond_to_json do

@@ -133,6 +133,107 @@ status and a standardised JSON error body.
 - `AnotherApi::ResponseHasMetadata` — builds the envelope's `meta:` block
   (offset, count, total, poll-interval hint).
 
+## OpenAPI 3.1 generation
+
+Opt-in. Add `require "another_api/openapi"` (typically in an initialiser)
+and you get a generator that walks your `api_serializer` schemas and the
+controllers that include the `EndpointMetadata` DSL, and emits an OpenAPI
+3.1 spec. The output assumes another_api's response envelope (`{success:,
+data:, metadata:}`) and pagination shape; if your API ships something
+different, subclass `PathBuilder` or override `error_response_content` /
+`pagination_metadata_schema` in configuration.
+
+```ruby
+# config/initializers/another_api_openapi.rb
+require "another_api/openapi"
+
+AnotherApi::OpenAPI.configure do |c|
+  c.title                   = "My API"
+  c.version                 = "1.0"
+  c.description             = "Public REST API"
+  c.path_prefix             = "/api/v1"            # stripped from route paths
+  c.controllers_glob        = "app/controllers/api/v1/**/*_controller.rb"
+  c.schema_namespace_prefix = "MyApp::Schemas::V1::" # auto-discovers nested schemas
+  c.default_variant_name    = :default              # which api_serializer variant
+                                                    # maps to "<Schema>Full" output
+
+  # If your app has its own filtering concerns:
+  c.register_concern "MyApp::FilterOnDeleted", :filter_on_deleted
+  c.register_concern "MyApp::FilterOnActive",  :filter_on_active
+end
+```
+
+Declare endpoint metadata on each controller:
+
+```ruby
+class Api::V1::UsersController < AnotherApi::BaseController
+  include AnotherApi::OpenAPI::EndpointMetadata
+
+  api_resource "Users",
+    schema:      -> { MyApp::Schemas::V1::User },
+    description: "Manage users in your account"
+
+  api_action :index,  summary: "List users"
+  api_action :show,   summary: "Get a single user"
+  api_action :create, summary: "Create a user"
+  api_action :update, summary: "Update a user"
+end
+```
+
+Generate the spec:
+
+```ruby
+spec      = AnotherApi::OpenAPI::Generator.generate
+spec_json = AnotherApi::OpenAPI::SpecRenderer.render_json   # cached, mtime-checked in dev
+```
+
+`SpecRenderer` caches the result for the lifetime of the process in
+production and recomputes it when files under `configuration.watched_dirs`
+change in development. Call `SpecRenderer.reset!` from a Rails reloader
+hook if you need finer control.
+
+### Index parameter advertising
+
+`PathBuilder` advertises these query-string parameters on `:index`
+operations only when the controller's ancestors include the
+corresponding `another_api` concern:
+
+| Parameter | Required concern |
+|---|---|
+| `page`, `page_size` | `AnotherApi::Paginated` |
+| `filter`, `sort` | `AnotherApi::FilteredAndSorted` |
+| `variant` | `AnotherApi::SchemaConfigurable` |
+| `deleted` | concern key `:filter_on_deleted` (register via `c.register_concern`) |
+| `active` | concern key `:filter_on_active` |
+
+Because `AnotherApi::BaseController` already includes `Paginated` and
+`SchemaConfigurable`, every controller that inherits from it advertises
+`page` / `page_size` / `variant` by default. `filter` / `sort` only
+appear if the controller explicitly `include`s `FilteredAndSorted`.
+
+### Reference example
+
+A working end-to-end example lives in this gem's dummy app — see
+`test/dummy/app/controllers/test/posts_controller.rb` and
+`test/dummy/app/controllers/test/widgets_controller.rb` for the DSL,
+`test/dummy/config/initializers/another_api_openapi.rb` for the
+configuration block, and `test/openapi/integration_test.rb` for an
+end-to-end assertion suite that generates and inspects the resulting
+spec.
+
+### Schema-name conventions
+
+OpenAPI component names are derived from the schema's class name. With
+`schema_namespace_prefix` set, the prefix is stripped and remaining
+sub-namespaces are concatenated (e.g.
+`MyApp::Schemas::V1::Seller::Cart` → `SellerCart`); without a prefix,
+`demodulize` is used. Variant suffixes:
+
+- the configured `default_variant_name` → `"Full"` (e.g. `UserFull`)
+- `:id_only` → `IdOnly`
+- any other variant → `CamelCase` of the variant symbol
+- deserializer variants → `<Name><VariantCamel>Input`
+
 ## License
 
 MIT. See `LICENSE.txt` at the repository root.

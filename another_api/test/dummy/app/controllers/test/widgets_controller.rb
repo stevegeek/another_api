@@ -2,9 +2,24 @@
 
 # In-memory "widget" store + an API controller that exercises the engine's
 # auth, error handling, and policy plumbing.
+#
+# Also doubles as a real-world example for AnotherApi::OpenAPI: the
+# EndpointMetadata DSL below documents the resource for spec generation.
+# WidgetsController does NOT explicitly include FilteredAndSorted, so the
+# generated spec will not advertise filter/sort on its index — but it
+# *does* inherit Paginated and SchemaConfigurable from AnotherApi::BaseController,
+# so page/page_size/variant will still be advertised.
 module Test
   class WidgetsController < AnotherApi::BaseController
     include Dry::Monads[:result]
+    include AnotherApi::OpenAPI::EndpointMetadata
+
+    api_resource "Widgets",
+      description: "In-memory widget store; demonstrates a controller without query-language concerns."
+
+    api_action :index, summary: "List widgets"
+    api_action :show, summary: "Get a single widget"
+    api_action :create, summary: "Create a new widget"
 
     STORE = []
 
