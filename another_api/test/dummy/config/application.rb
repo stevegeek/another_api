@@ -6,6 +6,7 @@ require "active_record/railtie"
 require "action_controller/railtie"
 
 require "another_api"
+require "another_api/openapi"
 
 module Dummy
   class Application < ::Rails::Application
