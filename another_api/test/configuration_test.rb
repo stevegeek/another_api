@@ -77,4 +77,45 @@ class AnotherApi::ConfigurationTest < Minitest::Test
     AnotherApi.configure { |c| c.token_model = "ApiToken" }
     assert_nil AnotherApi.configuration.validate!
   end
+
+  def test_token_model_class_resolves_and_memoizes
+    AnotherApi.reset_configuration!
+    AnotherApi.configure { |c| c.token_model = "ApiToken" }
+    klass = AnotherApi.configuration.token_model_class
+    assert_equal ApiToken, klass
+    assert_same klass, AnotherApi.configuration.token_model_class
+  end
+
+  def test_token_model_class_raises_when_class_cannot_be_resolved
+    AnotherApi.reset_configuration!
+    AnotherApi.configure { |c| c.token_model = "NoSuchConstantHere" }
+    err = assert_raises(AnotherApi::ConfigurationError) { AnotherApi.configuration.token_model_class }
+    assert_match(/NoSuchConstantHere/, err.message)
+  end
+
+  def test_token_model_class_raises_when_class_does_not_respond_to_find_by_token
+    AnotherApi.reset_configuration!
+    AnotherApi.configure { |c| c.token_model = "Bearer" }
+    err = assert_raises(AnotherApi::ConfigurationError) { AnotherApi.configuration.token_model_class }
+    assert_match(/find_by_token/, err.message)
+  end
+
+  def test_token_model_class_ignores_later_mutations_of_token_model
+    AnotherApi.reset_configuration!
+    AnotherApi.configure { |c| c.token_model = "ApiToken" }
+    resolved = AnotherApi.configuration.token_model_class
+    AnotherApi.configuration.token_model = "Bearer"
+    assert_same resolved, AnotherApi.configuration.token_model_class
+    assert_equal ApiToken, AnotherApi.configuration.token_model_class
+  end
+
+  def test_validate_eagerly_resolves_token_model_class
+    AnotherApi.reset_configuration!
+    AnotherApi.configure do |c|
+      c.token_secret = "s3cret"
+      c.token_model = "NoSuchConstantHere"
+    end
+    err = assert_raises(AnotherApi::ConfigurationError) { AnotherApi.configuration.validate! }
+    assert_match(/NoSuchConstantHere/, err.message)
+  end
 end

@@ -3,13 +3,26 @@ module AnotherApi
     private
 
     def deserialize_params(schema_class, variant, defaults: {})
-      body_data = params.to_unsafe_h.symbolize_keys.except(:controller, :action, :format)
-      data = defaults.merge(body_data)
       transformer = schema_class.deserializer_for(variant)
-      coerce_params_to_schema_types!(data, transformer.target_data_structure)
+      tds = transformer.target_data_structure
+      allowed_keys = schema_input_keys(tds)
+      body_data = params.to_unsafe_h.symbolize_keys.slice(*allowed_keys)
+      data = defaults.merge(body_data)
+      coerce_params_to_schema_types!(data, tds)
       transformer.transform(data, {current_variant_name: variant})
     rescue ApiSerializer::Errors::DataTransformError => e
       raise AnotherApi::BadRequestError, e.message
+    end
+
+    # Virtual attributes are excluded: they are computed server-side and
+    # populating them from request input is a mass-assignment vector.
+    def schema_input_keys(target_data_structure)
+      target_data_structure.attribute_names.filter_map do |attr_name|
+        opts = target_data_structure.reflect_on(attr_name)
+        next if opts&.virtual
+        key = opts&.from_path ? opts.from_path.to_s.split(".").first : attr_name.to_s
+        key.to_sym
+      end.uniq
     end
 
     def coerce_params_to_schema_types!(data, target_data_structure)

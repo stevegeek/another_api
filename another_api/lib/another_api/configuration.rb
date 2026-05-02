@@ -36,6 +36,23 @@ module AnotherApi
     def validate!
       raise ConfigurationError, "AnotherApi.configuration.token_secret must be set" if token_secret.nil? || token_secret.to_s.empty?
       raise ConfigurationError, "AnotherApi.configuration.token_model must be set" if token_model.nil? || token_model.to_s.empty?
+      token_model_class
+      nil
+    end
+
+    # Resolved once and memoised: later writes to token_model cannot redirect
+    # authentication to a different class. Call reset_configuration! to rebuild.
+    def token_model_class
+      @token_model_class ||= begin
+        klass = token_model.to_s.safe_constantize
+        if klass.nil?
+          raise ConfigurationError, "AnotherApi.configuration.token_model #{token_model.inspect} could not be resolved to a class"
+        end
+        unless klass.respond_to?(:find_by_token)
+          raise ConfigurationError, "AnotherApi.configuration.token_model #{token_model.inspect} must respond to .find_by_token (see AnotherApi::ApiTokenContract)"
+        end
+        klass
+      end
     end
   end
 

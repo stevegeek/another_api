@@ -11,8 +11,7 @@ module AnotherApi
     def authenticate_with_api_token
       authenticate_with_http_token do |raw_token, _options|
         @started_processing_request_at = Time.zone.now
-        token_model = AnotherApi.configuration.token_model.constantize
-        @current_api_token = token_model.find_by_token(raw_token)
+        @current_api_token = AnotherApi.configuration.token_model_class.find_by_token(raw_token)
         if @current_api_token&.active?
           @current_bearer = @current_api_token.bearer
           after_successful_authentication(@current_api_token, @current_bearer)
