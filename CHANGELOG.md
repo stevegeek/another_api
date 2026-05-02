@@ -9,6 +9,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-05-02
+
 ### Added
 
 - **another_api** — opt-in OpenAPI 3.1 spec generator under
@@ -63,5 +65,6 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 APIs are expected to evolve before `1.0.0`.
 
-[Unreleased]: https://github.com/stevegeek/another_api/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/stevegeek/another_api/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/stevegeek/another_api/releases/tag/v0.2.0
 [0.1.0]: https://github.com/stevegeek/another_api/releases/tag/v0.1.0

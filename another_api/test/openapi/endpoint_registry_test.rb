@@ -7,6 +7,12 @@ class AnotherApi::OpenAPI::EndpointRegistryTest < Minitest::Test
   def setup
     @prev = AnotherApi::OpenAPI.instance_variable_get(:@configuration)
     AnotherApi::OpenAPI.reset_configuration!
+    # Reference Test::PostsController eagerly so its EndpointMetadata
+    # api_action calls fire NOW (rather than later when the Entry below
+    # constructs it lazily). Then clear, so the registry contains only what
+    # this test puts there.
+    Test::PostsController
+    AnotherApi::OpenAPI::EndpointRegistry.clear!
   end
 
   def teardown

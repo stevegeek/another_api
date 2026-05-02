@@ -7,6 +7,10 @@ class AnotherApi::OpenAPI::GeneratorTest < Minitest::Test
   def setup
     @prev = AnotherApi::OpenAPI.instance_variable_get(:@configuration)
     AnotherApi::OpenAPI.reset_configuration!
+    # Eagerly autoload the controller we reference below so its
+    # EndpointMetadata DSL registers up-front, then clear so the registry
+    # contains only what THIS test registers.
+    Test::PostsController
     AnotherApi::OpenAPI::EndpointRegistry.clear!
 
     AnotherApi::OpenAPI.configure do |c|
