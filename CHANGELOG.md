@@ -9,6 +9,37 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-05-02
+
+Shared version bump across all four gems (per the monorepo convention).
+Only `another_api` has functional changes; the other three gems are
+no-op releases.
+
+### Security
+
+- **another_api** — `AnotherApi::Configuration#token_model` is now
+  resolved to a class once via `safe_constantize`, validated to respond
+  to `.find_by_token`, and memoised on the configuration object.
+  Authentication uses the memoised class, so mutating
+  `AnotherApi.configuration.token_model` after boot can no longer
+  redirect authentication to a different class. `validate!` forces
+  resolution eagerly so misconfiguration fails at boot rather than at
+  the first request.
+- **another_api** — `ParamDeserializer` no longer merges the entire
+  request body into deserializer input. Input is sliced to keys
+  declared on the schema, and attributes flagged `virtual: true` are
+  excluded — they are computed server-side and accepting them from
+  request params was a mass-assignment vector. Explicit `from:` remaps
+  are honoured (top-level segment of `from_path`).
+
+### Changed
+
+- **another_api** — `ParamDeserializer#deserialize_params` now silently
+  drops keys outside the schema's declared input. Previously any key in
+  the request body was passed through to the transformer. Callers that
+  relied on extra keys leaking through must declare them on the
+  deserializer.
+
 ## [0.2.0] — 2026-05-02
 
 ### Added
@@ -65,6 +96,7 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 
 APIs are expected to evolve before `1.0.0`.
 
-[Unreleased]: https://github.com/stevegeek/another_api/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/stevegeek/another_api/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/stevegeek/another_api/releases/tag/v0.3.0
 [0.2.0]: https://github.com/stevegeek/another_api/releases/tag/v0.2.0
 [0.1.0]: https://github.com/stevegeek/another_api/releases/tag/v0.1.0
